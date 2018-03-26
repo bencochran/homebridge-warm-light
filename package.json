@@ -1,0 +1,24 @@
+{
+  "name": "homebridge-warm-lights",
+  "version": "0.0.1",
+  "description": "Homebridge plugin for RGBWW lights. Trying to get a decent color calibration. Requires flux_led 0.21+ (https://github.com/beville/flux_led).",
+  "license": "MIT",
+  "version": "0.0.1",
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bencochran/homebridge-warm-light.git"
+  },
+  "dependencies": {
+    "color-convert": "^1.5.0"
+  },
+  "bugs": {
+    "url": "https://github.com/bencochran/homebridge-warm-light/issues"
+  },
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.0"
+  }
+}
