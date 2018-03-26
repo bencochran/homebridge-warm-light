@@ -7,7 +7,7 @@ let Service, Characteristic;
 module.exports = function (homebridge) {
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
-    
+
     homebridge.registerAccessory("homebridge-warm-lights", "WarmLights", WarmLights);
 };
 
@@ -15,11 +15,11 @@ function WarmLights(log, config) {
     this.log = log;
     this.name = config['name'] || 'LED Controller';
     this.ip = config['ip'];
-    
+
     this.hue = 360;
     this.saturation = 100;
     this.brightness = 100;
-    
+
     this.getColorFromDevice();
 }
 
@@ -30,14 +30,14 @@ WarmLights.prototype.identify = function(callback) {
 
 WarmLights.prototype.getServices = function() {
     let informationService = new Service.AccessoryInformation();
-    
+
     informationService
         .setCharacteristic(Characteristic.Manufacturer, 'ACME Ltd.')
         .setCharacteristic(Characteristic.Model, 'LED-controller')
         .setCharacteristic(Characteristic.SerialNumber, '123456789');
-    
+
     let lightbulbService = new Service.Lightbulb(this.name);
-    
+
     lightbulbService
         .getCharacteristic(Characteristic.On)
         .on('get', this.getPowerState.bind(this))
@@ -76,20 +76,34 @@ WarmLights.prototype.getState = function (callback) {
             brightness: 100
         };
 
-        const colors = stdout.match(/Color: \(\d{3}\, \d{3}, \d{3}\)/g);
-        const white = stdout.match(/White: \d{3}/);
+        const colorsMatch = stdout.match(/Color: \((\d{1,3}), (\d{1,3}), (\d{1,3})\)/);
+        const whiteMatch = stdout.match(/White: (\d{1,3})/);
         const isOn = stdout.match(/\] ON /g);
 
         if (isOn && isOn.length > 0) {
             settings.on = true;
         }
 
-        if (colors && colors.length > 0) {
-            // TODO: Use the reverse of the below conversion here (instead of `convert`)
-            var converted = convert.rgb.hsl(stdout.match(/\d{3}/g));
-            settings.hue = converted[0];
-            settings.saturation = converted[1];
-            settings.brightness = converted[2];
+        if (colorsMatch && colorsMatch.length == 4 && whiteMatch && whiteMatch.length == 2) {
+            const colors = colorsMatch.slice(1);
+
+            const red = colors[0] / 255.0;
+            const green = colors[1] / 255.0;
+            const blue = colors[2] / 255.0;
+            const white = whiteMatch[1] / 255.0;
+
+            const brightness = Math.round(Math.min(red + blue + green + white, 1) * 100);
+            let hue = Math.acos(((red - green) + (red - blue)) / (2.0 * Math.sqrt((red - green) * (red - green) + (red - blue) * (green - blue))));
+            hue = hue * 180 / Math.PI; // Convert to degrees
+            if (blue > green) {
+                hue = 360.0 - hue;
+            }
+            hue = Math.round(hue);
+            const saturation = Math.round((1.0 - (white + 3 * Math.min(red, green, blue)) / (red + green + blue + white)) * 100);
+
+            settings.hue = hue;
+            settings.saturation = saturation;
+            settings.brightness = brightness;
         }
 
         callback(settings);
@@ -100,9 +114,9 @@ WarmLights.prototype.getState = function (callback) {
 
 WarmLights.prototype.getColorFromDevice = function() {
     this.getState(function(settings) {
-        this.color = settings.color;
         this.hue = settings.hue;
         this.saturation = settings.saturation;
+        this.brightness = settings.brightness;
         this.log("DEVICE COLOR: %s", settings.hue+','+settings.saturation+','+settings.brightness);
     }.bind(this));
 };
@@ -116,10 +130,10 @@ WarmLights.prototype.setToCurrentColor = function() {
     // blog.saikoled.com/post/44677718712/how-to-convert-from-hsi-to-rgb-white
     //
     // Rotate the hue around so we’re always operating with one element at zero
-    
+
     const firstThird = Math.PI * 2.0 / 3.0;
     const secondThird = Math.PI * 4.0 / 3.0;
-    
+
     let offset = 0;
     if (hue < firstThird) {
         offset = 0;
@@ -130,18 +144,18 @@ WarmLights.prototype.setToCurrentColor = function() {
         hue = hue - secondThird;
         offset = 1;
     }
-    
+
     let colors = [
         saturation * 255.0 * brightness / 3.0 * (1 + Math.cos(hue) / Math.cos(1.047196667 - hue)),
         saturation * 255.0 * brightness / 3.0 * (1 + (1 - Math.cos(hue) / Math.cos(1.047196667 - hue))),
         0.0
     ];
-    
+
     const red = Math.round(colors[(0 + offset) % 3]);
     const green = Math.round(colors[(1 + offset) % 3]);
     const blue = Math.round(colors[(2 + offset) % 3]);
     const white = Math.round(255.0 * (1.0 - saturation) * brightness);
-    
+
     this.sendCommand('-c ' + red + ',' + green + ',' + blue + ',' + white);
 };
 
@@ -163,7 +177,9 @@ WarmLights.prototype.setPowerState = function(value, callback) {
 // MARK: - HUE
 
 WarmLights.prototype.getHue = function(callback) {
-    callback(null, this.hue);
+    this.getState(function(settings) {
+        callback(null, settings.hue);
+    });
 };
 
 WarmLights.prototype.setHue = function(value, callback) {
@@ -177,8 +193,9 @@ WarmLights.prototype.setHue = function(value, callback) {
 // MARK: - BRIGHTNESS
 
 WarmLights.prototype.getBrightness = function(callback) {
-    var brightness = this.brightness;
-    callback(null, brightness);
+    this.getState(function(settings) {
+        callback(null, settings.brightness);
+    });
 };
 
 WarmLights.prototype.setBrightness = function(value, callback) {
@@ -191,7 +208,9 @@ WarmLights.prototype.setBrightness = function(value, callback) {
 // MARK: - SATURATION
 
 WarmLights.prototype.getSaturation = function(callback) {
-    callback(null, this.saturation);
+    this.getState(function(settings) {
+        callback(null, settings.saturation);
+    });
 };
 
 WarmLights.prototype.setSaturation = function(value, callback) {
