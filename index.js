@@ -87,9 +87,9 @@ WarmLights.prototype.getState = function (callback) {
         if (colors && colors.length > 0) {
             // TODO: Use the reverse of the below conversion here (instead of `convert`)
             var converted = convert.rgb.hsl(stdout.match(/\d{3}/g));
-            settings.hue = converted[0]
-            settings.saturation = converted[1]
-            settings.brightness = converted[2]
+            settings.hue = converted[0];
+            settings.saturation = converted[1];
+            settings.brightness = converted[2];
         }
 
         callback(settings);
@@ -103,7 +103,7 @@ WarmLights.prototype.getColorFromDevice = function() {
         this.color = settings.color;
         this.hue = settings.hue;
         this.saturation = settings.saturation;
-        this.log("DEVICE COLOR: %s", settings.color.H+','+settings.color.S+','+settings.color.L);
+        this.log("DEVICE COLOR: %s", settings.hue+','+settings.saturation+','+settings.brightness);
     }.bind(this));
 };
 
@@ -163,12 +163,11 @@ WarmLights.prototype.setPowerState = function(value, callback) {
 // MARK: - HUE
 
 WarmLights.prototype.getHue = function(callback) {
-    var color = this.color;
-    callback(null, color.H);
+    callback(null, this.hue);
 };
 
 WarmLights.prototype.setHue = function(value, callback) {
-    this.color.H = value;
+    this.hue = value;
     this.log("SET HUE: %s", value);
     this.setToCurrentColor();
 
@@ -192,12 +191,11 @@ WarmLights.prototype.setBrightness = function(value, callback) {
 // MARK: - SATURATION
 
 WarmLights.prototype.getSaturation = function(callback) {
-    var color = this.color;
-    callback(null, color.S);
+    callback(null, this.saturation);
 };
 
 WarmLights.prototype.setSaturation = function(value, callback) {
-    this.color.S = value;
+    this.saturation = value;
     this.log("SET SATURATION: %s", value);
     this.setToCurrentColor();
 

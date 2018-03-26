@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Homebridge plugin for RGBWW lights. Trying to get a decent color calibration. Requires flux_led 0.21+ (https://github.com/beville/flux_led).",
   "license": "MIT",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "keywords": [
     "homebridge-plugin"
   ],
